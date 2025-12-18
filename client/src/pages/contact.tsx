@@ -1,158 +1,125 @@
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import { motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Mail, Phone, MapPin } from "lucide-react";
+import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
-import { Send } from "lucide-react";
-
-const formSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  email: z.string().email("Invalid email address"),
-  subject: z.string().min(5, "Subject must be at least 5 characters"),
-  message: z.string().min(10, "Message must be at least 10 characters"),
-});
 
 export default function Contact() {
+  const { register, handleSubmit, reset } = useForm();
   const { toast } = useToast();
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: "",
-      email: "",
-      subject: "",
-      message: "",
-    },
-  });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    // This is where the Netlify form submission happens automatically
-    // when the form has the 'data-netlify="true"' attribute.
-    // However, for SPA client-side submission, we need to encode data.
-    
+  const onSubmit = (data: any) => {
+    // Netlify Forms will handle this automatically with data-netlify="true"
     const formData = new FormData();
     formData.append("form-name", "contact");
-    Object.entries(values).forEach(([key, value]) => {
-      formData.append(key, value);
-    });
+    formData.append("firstName", data.firstName || "");
+    formData.append("lastName", data.lastName || "");
+    formData.append("email", data.email || "");
+    formData.append("message", data.message || "");
 
     fetch("/", {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams(formData as any).toString(),
+      body: formData,
     })
       .then(() => {
         toast({
-          title: "Message sent!",
-          description: "We'll get back to you as soon as possible.",
+          title: "Message Sent",
+          description: "Thank you for contacting us. We will get back to you shortly.",
         });
-        form.reset();
+        reset();
       })
       .catch((error) => {
+        console.error("Form submission error:", error);
         toast({
           title: "Error",
-          description: "Something went wrong. Please try again.",
+          description: "Something went wrong. Please try again later.",
           variant: "destructive",
         });
-        console.error("Form submission error:", error);
       });
-  }
+  };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-lg border-muted/20 shadow-xl">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold tracking-tight">Contact Us</CardTitle>
-          <CardDescription>
-            Send us a message and we'll respond within 24 hours.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form 
-              onSubmit={form.handleSubmit(onSubmit)} 
-              className="space-y-4"
-              data-netlify="true"
-              name="contact"
-              method="POST"
-            >
-              {/* Hidden input for Netlify forms */}
+    <div className="min-h-screen pt-24 pb-20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+          >
+            <h1 className="text-4xl md:text-5xl font-bold mb-6">Get in Touch</h1>
+            <p className="text-muted-foreground text-lg mb-10">
+              Tell us about your project and what you're looking to build. We'll get back to you with next steps.
+            </p>
+
+            <div className="space-y-8">
+              <div className="flex items-center gap-4">
+                <div className="bg-primary/10 p-3 rounded-full">
+                  <Mail className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-medium">Email</h3>
+                  <a href="mailto:contact@example.com" className="text-muted-foreground hover:text-primary transition-colors">contact@example.com</a>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-4">
+                <div className="bg-primary/10 p-3 rounded-full">
+                  <MapPin className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-medium">Location</h3>
+                  <span className="text-muted-foreground">Online Available</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-12 p-8 bg-primary/5 rounded-2xl border border-primary/20">
+              <h3 className="font-bold mb-2">Ready to start?</h3>
+              <p className="text-muted-foreground text-sm mb-4">
+                We typically respond to inquiries within 24 hours.
+              </p>
+            </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="bg-card border border-border p-8 rounded-3xl"
+          >
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" data-netlify="true" name="contact">
               <input type="hidden" name="form-name" value="contact" />
               
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="John Doe" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input placeholder="john@example.com" type="email" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="subject"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Subject</FormLabel>
-                    <FormControl>
-                      <Input placeholder="How can we help?" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="message"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Message</FormLabel>
-                    <FormControl>
-                      <Textarea 
-                        placeholder="Tell us about your project..." 
-                        className="min-h-[120px] resize-none" 
-                        {...field} 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit" className="w-full">
-                <Send className="w-4 h-4 mr-2" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>First Name</Label>
+                  <Input {...register("firstName")} placeholder="John" name="firstName" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Last Name</Label>
+                  <Input {...register("lastName")} placeholder="Doe" name="lastName" />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Email</Label>
+                <Input {...register("email", { required: true })} type="email" placeholder="john@company.com" name="email" />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Message</Label>
+                <Textarea {...register("message", { required: true })} className="min-h-[150px]" placeholder="Tell us about your project..." name="message" />
+              </div>
+
+              <Button type="submit" size="lg" className="w-full font-bold">
                 Send Message
               </Button>
             </form>
-          </Form>
-        </CardContent>
-      </Card>
+          </motion.div>
+        </div>
+      </div>
     </div>
   );
 }

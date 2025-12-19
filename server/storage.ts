@@ -1,104 +1,72 @@
-import { drizzle } from "drizzle-orm/node-postgres";
-import pg from "pg";
-import { eq, desc } from "drizzle-orm";
-import * as schema from "@shared/schema";
+// server/storage.ts
+import { supabase } from "./supabase";
 import type { User, InsertUser, Project, InsertProject, ContactSubmission, InsertContactSubmission } from "@shared/schema";
 
-const { Pool } = pg;
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-});
-
-const db = drizzle({ client: pool, schema });
-
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
+  getUser(id: string): Promise<User | null>;
+  getUserByUsername(username: string): Promise<User | null>;
   createUser(user: InsertUser): Promise<User>;
-  
-  // Projects
   getAllProjects(): Promise<Project[]>;
-  getProject(id: number): Promise<Project | undefined>;
+  getProject(id: number): Promise<Project | null>;
   createProject(project: InsertProject): Promise<Project>;
   deleteProject(id: number): Promise<void>;
-  
-  // Contact Submissions
   createContactSubmission(submission: InsertContactSubmission): Promise<ContactSubmission>;
   getAllContactSubmissions(): Promise<ContactSubmission[]>;
 }
 
-export class DatabaseStorage implements IStorage {
-  async getUser(id: string): Promise<User | undefined> {
-    const [user] = await db
-      .select()
-      .from(schema.users)
-      .where(eq(schema.users.id, id))
-      .limit(1);
-    return user;
+export class SupabaseStorage implements IStorage {
+  async getUser(id: string): Promise<User | null> {
+    const { data, error } = await supabase.from<User>("users").select("*").eq("id", id).single();
+    if (error) throw error;
+    return data;
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db
-      .select()
-      .from(schema.users)
-      .where(eq(schema.users.username, username))
-      .limit(1);
-    return user;
+  async getUserByUsername(username: string): Promise<User | null> {
+    const { data, error } = await supabase.from<User>("users").select("*").eq("username", username).single();
+    if (error) throw error;
+    return data;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db
-      .insert(schema.users)
-      .values(insertUser)
-      .returning();
-    return user;
+    const { data, error } = await supabase.from<User>("users").insert(insertUser).select().single();
+    if (error) throw error;
+    return data;
   }
 
   async getAllProjects(): Promise<Project[]> {
-    return await db
-      .select()
-      .from(schema.projects)
-      .orderBy(desc(schema.projects.createdAt));
+    const { data, error } = await supabase.from<Project>("projects").select("*").order("createdAt", { ascending: false });
+    if (error) throw error;
+    return data || [];
   }
 
-  async getProject(id: number): Promise<Project | undefined> {
-    const [project] = await db
-      .select()
-      .from(schema.projects)
-      .where(eq(schema.projects.id, id))
-      .limit(1);
-    return project;
+  async getProject(id: number): Promise<Project | null> {
+    const { data, error } = await supabase.from<Project>("projects").select("*").eq("id", id).single();
+    if (error) throw error;
+    return data;
   }
 
   async createProject(insertProject: InsertProject): Promise<Project> {
-    const [project] = await db
-      .insert(schema.projects)
-      .values(insertProject)
-      .returning();
-    return project;
+    const { data, error } = await supabase.from<Project>("projects").insert(insertProject).select().single();
+    if (error) throw error;
+    return data;
   }
 
   async deleteProject(id: number): Promise<void> {
-    await db
-      .delete(schema.projects)
-      .where(eq(schema.projects.id, id));
+    const { error } = await supabase.from<Project>("projects").delete().eq("id", id);
+    if (error) throw error;
   }
 
   async createContactSubmission(submission: InsertContactSubmission): Promise<ContactSubmission> {
-    const [contactSubmission] = await db
-      .insert(schema.contactSubmissions)
-      .values(submission)
-      .returning();
-    return contactSubmission;
+    const { data, error } = await supabase.from<ContactSubmission>("contactSubmissions").insert(submission).select().single();
+    if (error) throw error;
+    return data;
   }
 
   async getAllContactSubmissions(): Promise<ContactSubmission[]> {
-    return await db
-      .select()
-      .from(schema.contactSubmissions)
-      .orderBy(desc(schema.contactSubmissions.createdAt));
+    const { data, error } = await supabase.from<ContactSubmission>("contactSubmissions").select("*").order("createdAt", { ascending: false });
+    if (error) throw error;
+    return data || [];
   }
 }
 
-export const storage = new DatabaseStorage();
+export const storage = new SupabaseStorage();
